@@ -7,10 +7,18 @@ import os
 import base64
 from datetime import datetime
 
+import matplotlib.font_manager as fm
+
+# フォントファイルのパス（fontsフォルダに置いた場合）
+font_path = os.path.join(os.path.dirname(__file__), "fonts", "ipaexg.ttf")
+if os.path.exists(font_path):
+    fm.fontManager.addfont(font_path)
+    plt.rcParams['font.family'] = 'IPAexGothic'
+
 # --- 1. フォント・基本設定 ---
 # Windows環境(Meiryo)とLinux環境の両方に対応するためのリスト指定
-plt.rcParams['font.family'] = ['Meiryo', 'MS Gothic', 'DejaVu Sans', 'sans-serif']
-sns.set_theme(style="whitegrid", rc={"font.family": ['Meiryo', 'MS Gothic', 'sans-serif']})
+#plt.rcParams['font.family'] = ['Meiryo', 'MS Gothic', 'DejaVu Sans', 'sans-serif']
+sns.set_theme(style="whitegrid", rc={"font.family": ['IPAexGothic', 'Meiryo', 'MS Gothic', 'sans-serif']})
 
 st.set_page_config(page_title="小売業月次レポート", layout="wide")
 
