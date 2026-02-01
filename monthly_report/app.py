@@ -8,9 +8,9 @@ import base64
 from datetime import datetime
 
 # --- 1. フォント・基本設定 ---
-# Cloud環境ではMeiryoがないため、複数の候補を指定してフォント落ちを防ぎます
-plt.rcParams['font.family'] = ['DejaVu Sans', 'sans-serif'] 
-sns.set_theme(style="whitegrid")
+# Windows環境(Meiryo)とLinux環境の両方に対応するためのリスト指定
+plt.rcParams['font.family'] = ['Meiryo', 'MS Gothic', 'DejaVu Sans', 'sans-serif']
+sns.set_theme(style="whitegrid", rc={"font.family": ['Meiryo', 'MS Gothic', 'sans-serif']})
 
 st.set_page_config(page_title="小売業月次レポート", layout="wide")
 
@@ -64,6 +64,7 @@ def process_and_filter(df, companies, end_month_str):
 
     return create_pivot(df[df['全店/既存店'] == '全店']), create_pivot(df[df['全店/既存店'] == '既存店'])
 
+# --- チャート生成関数（修正なしですが確認用） ---
 def create_chart(table, title):
     if table.empty: return None
     fig, ax = plt.subplots(figsize=(12, 6))
@@ -77,8 +78,10 @@ def create_chart(table, title):
     plt.tight_layout()
     return fig
 
+# --- HTMLレポート生成関数（CSSを強化） ---
 def get_html_report(dfs_with_titles, figs_with_titles):
-    html = "<html><head><meta charset='utf-8'><style>body{font-family:sans-serif; padding:20px;} table{border-collapse:collapse; width:100%; margin-bottom:30px;} th,td{border:1px solid #ccc; padding:8px; text-align:right;} th{background:#f4f4f4;}</style></head><body>"
+    # font-family に Meiryo を追加
+    html = "<html><head><meta charset='utf-8'><style>body{font-family:'Meiryo', 'MS Gothic', sans-serif; padding:20px;} table{border-collapse:collapse; width:100%; margin-bottom:30px;} th,td{border:1px solid #ccc; padding:8px; text-align:right;} th{background:#f4f4f4; text-align:center;}</style></head><body>"
     html += "<h1>月次業績レポート</h1>"
     for title, df in dfs_with_titles.items():
         if not df.empty:
@@ -88,10 +91,9 @@ def get_html_report(dfs_with_titles, figs_with_titles):
             buf = io.BytesIO()
             fig.savefig(buf, format="png", bbox_inches='tight')
             data = base64.b64encode(buf.getbuffer()).decode("ascii")
-            html += f"<h2>{title}</h2><img src='data:image/png;base64,{data}' style='max-width:100%;'/><br>"
+            html += f"<h2>{title} チャート</h2><img src='data:image/png;base64,{data}' style='max-width:100%;'/><br>"
     html += "</body></html>"
     return html
-
 # --- 4. メイン UI ---
 st.title("📊 小売業 月次業績ダッシュボード")
 
