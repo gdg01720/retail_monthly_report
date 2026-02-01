@@ -25,18 +25,25 @@ GROUPS = {
 }
 
 # --- 3. ロジック関数 ---
-
 def load_data():
-    """リポジトリ内の data フォルダからファイルを読み込む"""
-    # app.py と同じ階層、または一つ下の data フォルダを探す
-    possible_paths = [
-        os.path.join("data", "retail_data.xlsx"),
-        "retail_data.xlsx"
-    ]
+    """実行スクリプトの場所を基準に data フォルダを探す（より堅牢な方法）"""
+    # 1. app.py が置かれているディレクトリの絶対パスを取得
+    current_dir = os.path.dirname(os.path.abspath(__file__))
     
-    for path in possible_paths:
-        if os.path.exists(path):
-            return pd.read_excel(path), path
+    # 2. その下の data/retail_data.xlsx を指すパスを作成
+    path = os.path.join(current_dir, "data", "retail_data.xlsx")
+    
+    # デバッグ用：探しているパスを画面に出さずにログ（Manage app）に記録する
+    # print(f"Looking for file at: {path}")
+
+    if os.path.exists(path):
+        return pd.read_excel(path), path
+    
+    # もし見つからない場合、念のため直下の data フォルダも探す
+    alternative_path = os.path.join("data", "retail_data.xlsx")
+    if os.path.exists(alternative_path):
+        return pd.read_excel(alternative_path), alternative_path
+        
     return None, None
 
 def process_and_filter(df, companies, end_month_str):
