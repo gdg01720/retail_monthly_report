@@ -1,24 +1,33 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
 import seaborn as sns
 import io
 import os
 import base64
 from datetime import datetime
 
-import matplotlib.font_manager as fm
+# --- 1. フォント・基本設定 (Streamlit Cloud対応) ---
+def setup_font():
+    """リポジトリ内のフォントファイルを読み込む"""
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # フォントファイルのパスを指定
+    font_path = os.path.join(current_dir, "fonts", "ipaexg.ttf")
+    
+    if os.path.exists(font_path):
+        # Matplotlibにフォントを追加
+        fm.fontManager.addfont(font_path)
+        prop = fm.FontProperties(fname=font_path)
+        plt.rcParams['font.family'] = prop.get_name()
+        return prop.get_name()
+    else:
+        # フォントがない場合はOS標準（Windows用）を試みる
+        plt.rcParams['font.family'] = ['Meiryo', 'MS Gothic', 'sans-serif']
+        return 'sans-serif'
 
-# フォントファイルのパス（fontsフォルダに置いた場合）
-font_path = os.path.join(os.path.dirname(__file__), "fonts", "ipaexg.ttf")
-if os.path.exists(font_path):
-    fm.fontManager.addfont(font_path)
-    plt.rcParams['font.family'] = 'IPAexGothic'
-
-# --- 1. フォント・基本設定 ---
-# Windows環境(Meiryo)とLinux環境の両方に対応するためのリスト指定
-#plt.rcParams['font.family'] = ['Meiryo', 'MS Gothic', 'DejaVu Sans', 'sans-serif']
-sns.set_theme(style="whitegrid", rc={"font.family": ['IPAexGothic', 'Meiryo', 'MS Gothic', 'sans-serif']})
+font_name = setup_font()
+sns.set_theme(style="whitegrid", rc={"font.family": font_name})
 
 st.set_page_config(page_title="小売業月次レポート", layout="wide")
 
@@ -33,25 +42,14 @@ GROUPS = {
 }
 
 # --- 3. ロジック関数 ---
+
 def load_data():
-    """実行スクリプトの場所を基準に data フォルダを探す（より堅牢な方法）"""
-    # 1. app.py が置かれているディレクトリの絶対パスを取得
+    """リポジトリ内の data フォルダからファイルを読み込む"""
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    # 2. その下の data/retail_data.xlsx を指すパスを作成
     path = os.path.join(current_dir, "data", "retail_data.xlsx")
     
-    # デバッグ用：探しているパスを画面に出さずにログ（Manage app）に記録する
-    # print(f"Looking for file at: {path}")
-
     if os.path.exists(path):
         return pd.read_excel(path), path
-    
-    # もし見つからない場合、念のため直下の data フォルダも探す
-    alternative_path = os.path.join("data", "retail_data.xlsx")
-    if os.path.exists(alternative_path):
-        return pd.read_excel(alternative_path), alternative_path
-        
     return None, None
 
 def process_and_filter(df, companies, end_month_str):
@@ -72,7 +70,6 @@ def process_and_filter(df, companies, end_month_str):
 
     return create_pivot(df[df['全店/既存店'] == '全店']), create_pivot(df[df['全店/既存店'] == '既存店'])
 
-# --- チャート生成関数（修正なしですが確認用） ---
 def create_chart(table, title):
     if table.empty: return None
     fig, ax = plt.subplots(figsize=(12, 6))
@@ -86,10 +83,8 @@ def create_chart(table, title):
     plt.tight_layout()
     return fig
 
-# --- HTMLレポート生成関数（CSSを強化） ---
 def get_html_report(dfs_with_titles, figs_with_titles):
-    # font-family に Meiryo を追加
-    html = "<html><head><meta charset='utf-8'><style>body{font-family:'Meiryo', 'MS Gothic', sans-serif; padding:20px;} table{border-collapse:collapse; width:100%; margin-bottom:30px;} th,td{border:1px solid #ccc; padding:8px; text-align:right;} th{background:#f4f4f4; text-align:center;}</style></head><body>"
+    html = "<html><head><meta charset='utf-8'><style>body{font-family:sans-serif; padding:20px;} table{border-collapse:collapse; width:100%; margin-bottom:30px;} th,td{border:1px solid #ccc; padding:8px; text-align:right;} th{background:#f4f4f4;}</style></head><body>"
     html += "<h1>月次業績レポート</h1>"
     for title, df in dfs_with_titles.items():
         if not df.empty:
@@ -99,9 +94,10 @@ def get_html_report(dfs_with_titles, figs_with_titles):
             buf = io.BytesIO()
             fig.savefig(buf, format="png", bbox_inches='tight')
             data = base64.b64encode(buf.getbuffer()).decode("ascii")
-            html += f"<h2>{title} チャート</h2><img src='data:image/png;base64,{data}' style='max-width:100%;'/><br>"
+            html += f"<h2>{title}</h2><img src='data:image/png;base64,{data}' style='max-width:100%;'/><br>"
     html += "</body></html>"
     return html
+
 # --- 4. メイン UI ---
 st.title("📊 小売業 月次業績ダッシュボード")
 
@@ -147,6 +143,5 @@ if df_raw is not None:
     st.sidebar.download_button("HTML保存", h_rep, f"report_{selected_pattern}.html", "text/html")
 
 else:
-    # ここが NameError の原因箇所でした。修正済み。
     st.error("データファイルが見つかりません。")
     st.info("GitHubの 'data/' フォルダ内に 'retail_data.xlsx' という名前でファイルを配置してください。")
